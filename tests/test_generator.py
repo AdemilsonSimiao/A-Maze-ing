@@ -42,9 +42,35 @@ class TestMazeGenerator(unittest.TestCase):
     def test_imperfect_maze(self) -> None:
         generator = self.make_generator(perfect=False)
         grid = generator.generate()
-        self.assertEqual(len(self.grid), 3)
-        self.assertEqual(len(self.grid[0]), 5)
+        self.assertEqual(len(grid), 3)
+        self.assertEqual(len(grid[0]), 5)
     
-
+    def test_walls_are_coherent(self) -> None:
+        for y, row in enumerate(self.grid):
+            for x, cell in enumerate(row):
+                if x + 1 < len(row):
+                    east_cell = row[x + 1]
+                    self.assertEqual(
+                        cell.is_open("E"),
+                        east_cell.is_open("W"),
+                    )
+                if y + 1 < len(self.grid):
+                    south_cell = self.grid[y + 1][x]
+                    self.assertEqual(
+                        cell.is_open("S"),
+                        south_cell.is_open("N"),
+                    )
+    
+    def test_outer_borders_are_closed(self) -> None:
+        for row in self.grid:
+            self.assertFalse(row[0].is_open("W"))
+            self.assertFalse(row[-1].is_open("E"))
+        for cell in self.grid[0]:
+            self.assertFalse(cell.is_open("N"))
+        for cell in self.grid[-1]:
+            self.assertFalse(cell.is_open("S"))
+    
+    
+    
 if __name__ == "__main__":
     unittest.main()

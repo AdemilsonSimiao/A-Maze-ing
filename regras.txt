@@ -1,0 +1,357 @@
+Mandatory part
+IV.1 Summary
+You will implement a maze generator in Python that takes a configuration file, generates
+a maze, possibly perfect (with a single path between entrance and exit), and writes it to a
+file using a hexadecimal wall representation. You will also provide a visual representation
+of the maze and organize your code so that the generation logic can be reused later.
+IV.2 Usage
+Your program must be run with the following command:
+python3 a_maze_ing.py config.txt
+• a_maze_ing.py is your main program file. You must use this name.
+• config.txt is the only argument. It is a plain text file that defines the maze
+generation options. You can use a different filename.
+Your program must handle all errors gracefully: invalid configuration, file not found, bad
+syntax, impossible maze parameters, etc. It must never crash unexpectedly, and must
+always provide a clear error message to the user.
+IV.3 Configuration file format
+The configuration file must contain one ‘KEY=VALUE‘ pair per line.
+Lines starting with # are comments and must be ignored.
+The following keys are mandatory:
+Key Description Example
+WIDTH Maze width (number of cells) WIDTH=20
+HEIGHT Maze height HEIGHT=15
+ENTRY Entry coordinates (x,y) ENTRY=0,0
+EXIT Exit coordinates (x,y) EXIT=19,14
+OUTPUT_FILE Output filename OUTPUT_FILE=maze.txt
+PERFECT Is the maze perfect? PERFECT=True
+7
+A-Maze-ing This is the way
+You may add additional keys (e.g., seed, algorithm, display mode) if useful.
+A default configuration file must be available in your Git repository.
+IV.4 Maze Requirements
+• The maze must be randomly generated, but reproducibility via a seed is required.
+• Each cell of the maze has between 0 and 4 walls, at each cardinal point (North,
+East, South, West).
+• The maze must be valid, meaning:
+◦ Entry and exit exist and are different, inside the maze bounds.
+◦ The structure ensures full connectivity and no isolated cells (except the ’42’
+pattern, see below).
+◦ As entry and exit are specific cells, there must be walls at the external borders.
+◦ Your generated data must be coherent: each neighbouring cell must have the
+same wall if any. E.g., it is forbidden to have a first cell with a wall on the
+east side, and the second cell behind that wall without a wall on the west side.
+• The maze can’t have large open areas. Corridors can’t be wider than 2 cells.
+For example, you can have 2x3 or 3x2 open area, but never a 3x3 open area.
+• When visually represented (see below), the maze must contain a visible “42” drawn
+by several fully closed cells.
+• If the PERFECT flag is activated, the maze must contain exactly one path between
+the entry and the exit (i.e., it must be a perfect maze: no loops at all).
+• If the PERFECT flag is not activated (the default), the maze must instead be a board
+directly usable by a Pac-Man-like game. Concretely:
+◦ every corridor is reachable (full connectivity), so the whole board can be filled
+with pac-gums and remains winnable;
+◦ the four corners and the centre are open corridors (the ghosts and super-pacgums sit in the corners, the player starts in the centre);
+◦ it offers at least two independent routes (loops), so that a chased player
+always has an alternative (a perfect maze, or a perfect maze with merely one
+wall removed (a single loop), is therefore not acceptable in this mode);
+◦ dead-ends should stay rare (a couple are tolerated); a board with no dead-end
+at all is the ideal and is rewarded as a bonus (see the Bonuses chapter).
+The “42” pattern may be omitted in case the maze size does not allow
+it (i.e. too small). Print an error message on the console in that
+case
+
+A-Maze-ing This is the way
+The two generation modes on the same grid: PERFECT=True forces a single winding path (every other
+corridor is a dead-end), while the default PERFECT=False keeps at least two independent routes open so
+a chased player always has an alternative. The shortest path is highlighted in both.
+IV.5 Output File Format
+The maze must be written in the output file using one hexadecimal digit per cell, where
+each digit encodes which walls are closed:
+Bit Direction
+0 (LSB) North
+1 East
+2 South
+3 West
+• A wall being closed sets the bit to 1, open means 0.
+Example: 3 (binary 0011) means walls are open to the south and west. Or A
+(binary 1010) means that east and west walls are closed.
+• Cells are stored row by row, one row per line.
+• After an empty line, the following 3 elements are inserted in the output file on 3
+lines:
+◦ the entry coordinates, the exit coordinates, and the shortest valid path from
+entry to exit, using the four letters N , E , S , W .
+• All lines end with a \n .
+9
+A-Maze-ing This is the way
+In conjunction with its specific configuration file, this output file could be tested automatically by a Moulinette. An analysis script (maze_analyzer.py) is also provided with
+this subject. Given an output file, it checks that the wall encoding is coherent (each
+shared wall is encoded the same way by both neighbouring cells) and reports whether
+the maze is perfect (a single path, as required with PERFECT=True) or a playable board
+(no dead-ends besides the “42” pattern and several independent routes, as required by
+default). You may use it to check that your generator produces the mode requested by
+the configuration file.
+Output file example
+
+Visual representation
+Your program must provide a way to display the maze visually, using either:
+• Terminal ASCII rendering, or
+• A graphical display using the MiniLibX (MLX) library.
+The visual should clearly show walls, entry, exit, and the solution path.
+User interactions must be available while the program is running, and must include, at
+least, the following tasks:
+• Re-generate a new maze and display it.
+• Show/Hide a valid shortest path from the entrance to the exit.
+• Change maze wall colours.
+• Optional: set specific colours to display the “42” pattern.
+You can add extra user interactions.
+11
+A-Maze-ing This is the way
+Terminal default rendering of the maze
+Different maze, shortest path and wall colours
+12
+A-Maze-ing This is the way
+Maze rendering using Mlx
+
+Code reusability requirements
+You must implement the maze generation as a unique class (e.g., ‘MazeGenerator‘) inside
+a standalone module that can be imported in a future project.
+You must provide a short documentation describing how to:
+• Instantiate and use your generator, with at least a basic example.
+• Pass custom parameters (e.g., size, seed).
+• Access the generated structure, and access at least a solution.
+The maze generator module grants access to the maze structure, but it
+REGRAS DO PROJETO A-MAZE-ING
+============================
+
+Este arquivo reorganiza o enunciado em requisitos e etapas de execução. O texto
+original exige um gerador reutilizável, um arquivo de saída hexadecimal, uma
+representação visual e tratamento claro de erros.
+
+
+1. ESTADO ATUAL DO PROJETO
+--------------------------
+
+[x] config.txt existe na raiz e contém WIDTH, HEIGHT, ENTRY, EXIT,
+	OUTPUT_FILE, PERFECT e SEED.
+[x] cli/config_parser.py lê e valida a configuração básica.
+[x] cli/errors.py define ConfigError.
+[x] mazegen/generator.py contém Cell, MazeGenerator e a geração por DFS.
+[x] mazegen/solver.py contém MazeSolver com busca BFS.
+[x] tests/test_config_parser.py possui testes do parser.
+[x] tests/test_generator.py possui testes de dimensões, células, seed e
+	modo perfect=False.
+[x] tests/test_solver.py possui testes de caminho encontrado, chegada à saída
+	e ausência de caminho.
+[x] LICENSE.md, README.md, Makefile, pyproject.toml e o wheel existem.
+[~] a_maze_ing.py lê a configuração, mas ainda apenas imprime seus valores.
+[x] mazegen/encoder.py implementa a serialização do labirinto no formato
+	hexadecimal exigido.
+[x] tests/test_encoder.py possui testes de célula, grade, labirinto e arquivo.
+[x] o fluxo principal gera, resolve, codifica e grava o labirinto.
+[ ] a renderização e as interações precisam ser verificadas contra o enunciado.
+[ ] os requisitos avançados do modo não perfeito e do padrão 42 ainda não foram
+	comprovados por testes.
+
+Observação: a implementação atual de geração e resolução foi verificada pelos testes
+presentes no repositório. A codificação da saída e a integração com o CLI também foram
+implementadas e validadas. A renderização e os requisitos avançados ainda estão pendentes.
+
+
+2. EXECUÇÃO OBRIGATÓRIA
+-----------------------
+
+O programa deve ser executado com:
+
+	python3 a_maze_ing.py config.txt
+
+Requisitos:
+
+- a_maze_ing.py deve ser o arquivo principal;
+- config.txt é o único argumento;
+- erros de arquivo, sintaxe, configuração e parâmetros impossíveis devem ser
+  tratados com mensagens claras;
+- o programa não deve quebrar inesperadamente.
+
+
+3. FORMATO DA CONFIGURAÇÃO
+--------------------------
+
+Cada linha válida tem o formato KEY=VALUE. Linhas vazias e linhas iniciadas
+com # devem ser ignoradas.
+
+Chaves obrigatórias:
+
+	WIDTH=20
+	HEIGHT=15
+	ENTRY=0,0
+	EXIT=19,14
+	OUTPUT_FILE=maze.txt
+	PERFECT=True
+
+Chaves adicionais, como SEED, são permitidas. Deve existir uma configuração
+default versionada no repositório.
+
+
+4. REQUISITOS DO LABIRINTO
+--------------------------
+
+O labirinto deve:
+
+- ser aleatório e reproduzível quando uma seed for usada;
+- ter células com paredes Norte, Leste, Sul e Oeste;
+- manter ENTRY e EXIT dentro dos limites e em posições diferentes;
+- ser totalmente conectado, sem células isoladas;
+- manter as bordas externas fechadas;
+- manter paredes compartilhadas coerentes entre células vizinhas;
+- não criar áreas abertas maiores que 2 células de largura;
+- conter um padrão visual 42 quando o tamanho permitir;
+- informar no console quando o padrão 42 não puder ser criado.
+
+Modo PERFECT=True:
+
+- deve existir exatamente um caminho entre entrada e saída;
+- não pode haver loops.
+
+Modo PERFECT=False:
+
+- todos os corredores devem ser alcançáveis;
+- os quatro cantos e o centro devem ser corredores abertos;
+- devem existir pelo menos dois caminhos independentes;
+- becos sem saída devem ser raros.
+
+
+5. FORMATO DO ARQUIVO DE SAÍDA
+------------------------------
+
+Cada célula ocupa um dígito hexadecimal. Os bits representam paredes fechadas:
+
+	bit 0 (1): Norte
+	bit 1 (2): Leste
+	bit 2 (4): Sul
+	bit 3 (8): Oeste
+
+Parede fechada = bit 1. Passagem aberta = bit 0.
+
+As células são escritas linha por linha. Depois das linhas do labirinto, o
+arquivo deve conter:
+
+1. uma linha vazia;
+2. as coordenadas da entrada;
+3. as coordenadas da saída;
+4. o caminho mínimo usando N, E, S e W.
+
+Todas as linhas devem terminar com \n.
+
+
+6. VISUALIZAÇÃO E INTERAÇÕES
+----------------------------
+
+Deve existir uma visualização ASCII ou MiniLibX que mostre:
+
+- paredes;
+- entrada;
+- saída;
+- caminho da solução.
+
+Durante a execução, deve ser possível:
+
+- gerar e exibir outro labirinto;
+- mostrar ou ocultar o caminho mínimo;
+- alterar a cor das paredes;
+- opcionalmente destacar o padrão 42.
+
+
+7. REUTILIZAÇÃO E EMPACOTAMENTO
+-------------------------------
+
+O gerador deve ser uma classe reutilizável em um módulo independente. A
+documentação deve explicar:
+
+- como instanciar e usar o gerador;
+- como passar tamanho, seed e outros parâmetros;
+- como acessar a estrutura gerada;
+- como acessar uma solução.
+
+O pacote deve:
+
+- ter nome no formato mazegen-*;
+- estar disponível na raiz do repositório como .whl ou .tar.gz;
+- conter tudo o que é necessário para ser reconstruído com ferramentas padrão;
+- incluir LICENSE.md permitindo reutilização e distribuição.
+
+
+8. DOCUMENTAÇÃO DO README.md
+----------------------------
+
+A primeira linha deve ser italicizada e informar que o projeto foi criado como
+parte do currículo 42 pelos logins da equipe.
+
+O README deve conter:
+
+- Description;
+- Instructions;
+- Resources;
+- formato completo do config.txt;
+- algoritmo escolhido e justificativa;
+- parte reutilizável do código;
+- papéis da equipe;
+- planejamento previsto e evolução;
+- o que funcionou e o que pode melhorar;
+- ferramentas utilizadas;
+- uso de IA, indicando tarefas e partes do projeto em que foi usada.
+
+
+9. PASSOS NECESSÁRIOS PARA FINALIZAR
+------------------------------------
+
+Fase 1 - Validar o núcleo:
+
+1. revisar o contrato público de MazeGenerator e MazeSolver;
+2. testar conectividade total;
+3. testar coerência das paredes vizinhas;
+4. testar bordas externas fechadas;
+5. testar PERFECT=True sem loops;
+6. implementar e testar as regras específicas de PERFECT=False;
+7. implementar e testar o padrão 42.
+
+Fase 2 - Implementar a saída:
+
+8. implementar mazegen/encoder.py;
+9. converter a grade para hexadecimal;
+10. adicionar linha vazia, entrada, saída e caminho mínimo;
+11. testar o conteúdo e a formatação do arquivo.
+
+Fase 3 - Integrar o programa:
+
+12. atualizar a_maze_ing.py para criar o gerador a partir de MazeConfig;
+13. gerar o labirinto;
+14. resolver o caminho;
+15. gravar OUTPUT_FILE;
+16. tratar ConfigError, FileNotFoundError e demais erros esperados.
+
+Fase 4 - Finalizar a visualização:
+
+17. verificar o renderer escolhido;
+18. mostrar paredes, entrada, saída e solução;
+19. implementar regeneração, mostrar/ocultar solução e cores;
+20. testar a execução interativa.
+
+Fase 5 - Validar a entrega:
+
+21. executar todos os testes;
+22. executar flake8;
+23. executar mypy;
+24. executar python3 a_maze_ing.py config.txt;
+25. verificar o arquivo de saída com o analisador fornecido;
+26. reconstruir o pacote mazegen a partir das fontes;
+27. revisar README.md, LICENSE.md e o arquivo config.txt default.
+
+
+10. BÔNUS
+---------
+
+Possíveis bônus:
+
+- modo não perfeito sem becos sem saída;
+- múltiplos algoritmos de geração;
+- animação durante a geração.
