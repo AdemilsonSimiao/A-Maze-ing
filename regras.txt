@@ -131,30 +131,92 @@ representação visual e tratamento claro de erros.
 1. ESTADO ATUAL DO PROJETO
 --------------------------
 
+Situação verificada em 2026-09-20 rodando os testes, o flake8, o mypy e o
+programa com o config.txt do projeto.
+
+Legenda:
+[x] feito e verificado (por teste ou por execução);
+[~] existe, mas está parcial ou tem problema conhecido (descrito na linha);
+[ ] pendente.
+
+1.1 Arquivos
+
 [x] config.txt existe na raiz e contém WIDTH, HEIGHT, ENTRY, EXIT,
 	OUTPUT_FILE, PERFECT e SEED.
-[x] cli/config_parser.py lê e valida a configuração básica.
 [x] cli/errors.py define ConfigError.
-[x] mazegen/generator.py contém Cell, MazeGenerator e a geração por DFS.
-[x] mazegen/solver.py contém MazeSolver com busca BFS.
-[x] tests/test_config_parser.py possui testes do parser.
-[x] tests/test_generator.py possui testes de dimensões, células, seed e
-	modo perfect=False.
-[x] tests/test_solver.py possui testes de caminho encontrado, chegada à saída
-	e ausência de caminho.
-[x] LICENSE.md, README.md, Makefile, pyproject.toml e o wheel existem.
-[~] a_maze_ing.py lê a configuração, mas ainda apenas imprime seus valores.
-[x] mazegen/encoder.py implementa a serialização do labirinto no formato
-	hexadecimal exigido.
-[x] tests/test_encoder.py possui testes de célula, grade, labirinto e arquivo.
-[x] o fluxo principal gera, resolve, codifica e grava o labirinto.
-[ ] a renderização e as interações precisam ser verificadas contra o enunciado.
-[ ] os requisitos avançados do modo não perfeito e do padrão 42 ainda não foram
-	comprovados por testes.
+[~] cli/config_parser.py lê e valida a configuração. Problemas:
+	- linha com chave vazia, valor vazio ou chave duplicada levanta ValueError,
+	  e não ConfigError;
+	- SEED é exigida como chave obrigatória (o enunciado a trata como extra);
+	- WIDTH e HEIGHT não são validados como maiores que zero (a mensagem diz isso,
+	  mas só o erro de "não é inteiro" é tratado);
+	- erro de digitação na mensagem: "interger".
+[~] mazegen/generator.py contém Cell, MazeGenerator e a geração por DFS.
+	- DFS sem o 42: [x] gera árvore perfeita (ex.: 10x6 tem 59 passagens para 60
+	  células, tudo alcançável, paredes coerentes);
+	- padrão 42 e modo não perfeito: [~] ver 1.2.
+[x] mazegen/solver.py contém MazeSolver com busca BFS (3 testes passam).
+[x] mazegen/encoder.py implementa a serialização hexadecimal (4 testes passam).
+[~] display/ascii_renderer.py desenha paredes, entrada (E), saída (X) e caminho
+	(.). Problemas:
+	- o renderer já usa cores ANSI, mas 3 dos 4 testes do renderer ainda esperam
+	  texto sem cor e falham;
+	- o parâmetro wall_color existe, mas nada o usa;
+	- pattern_cells existe, mas a_maze_ing.py nunca o passa (o 42 não é destacado).
+[~] a_maze_ing.py gera, resolve, imprime o ASCII uma vez e grava o OUTPUT_FILE.
+	Problemas:
+	- só trata FileNotFoundError: com um config inválido o programa mostra um
+	  traceback (ConfigError não é capturado), o que viola "nunca quebrar";
+	- não há nenhuma interação (regenerar, mostrar/ocultar caminho, cores);
+	- não trata erros de gravação do arquivo de saída.
+[ ] display/mlx_renderer.py está vazio (só será necessário se o MLX for
+	escolhido; hoje a escolha é a renderização ASCII).
+[ ] LICENSE.md está vazio.
+[ ] pyproject.toml está vazio.
+[ ] mazegen-1.0.0-py3-none-any.whl tem 0 bytes (não é um pacote válido).
+[ ] docs/algorithm_notes.md está vazio.
+[~] README.md só contém anotações de Git; falta todo o conteúdo exigido
+	(seção 8).
+[~] Makefile só tem uma linha de texto com os nomes (install, run, debug, clean,
+	lint, lint-strict); ainda não há alvos reais.
+[~] tests/: 21 testes, 18 passam e 3 falham (renderer, ver acima). Não existem
+	testes para o padrão 42, para as regras do modo PERFECT=False, para
+	conectividade total, para a regra da área aberta 3x3 nem para o a_maze_ing.py.
+[x] mypy: sem erros nos 16 arquivos.
+[ ] flake8: 139 avisos (sobretudo W191 tabulação, W293 espaços em linhas em
+	branco, E302/E305 linhas em branco, W292 sem quebra de linha no fim, F401 e
+	F841 imports/variáveis sem uso).
+[ ] maze_analyzer.py (analisador fornecido com o enunciado) não está no
+	projeto, então a saída ainda não foi verificada com ele.
 
-Observação: a implementação atual de geração e resolução foi verificada pelos testes
-presentes no repositório. A codificação da saída e a integração com o CLI também foram
-implementadas e validadas. A renderização e os requisitos avançados ainda estão pendentes.
+1.2 Problemas de comportamento verificados
+
+Padrão 42 (mazegen/generator.py, _apply_42_pattern):
+- ele é aplicado depois de o labirinto pronto e fecha as 4 paredes das
+  células do 42, mas não fecha as paredes dos vizinhos que davam para elas.
+  Com 20x15 e seed 42 aparecem 32 pares de paredes incoerentes, e só 174 das
+  300 células são alcançáveis a partir da entrada. Com as seeds 0 a 4 o solver
+  não encontra caminho entre entrada e saída (retorna vazio) e o programa não
+  avisa;
+- generate() chama o padrão quando WIDTH >= 8 e HEIGHT >= 5, mas o próprio
+  padrão exige pelo menos 14x8. Entre esses tamanhos só imprime "Pattern 42
+  skipped: maze too small.", o que cumpre o aviso pedido, mas a condição está
+  duplicada e inconsistente;
+- o 42 é desenhado com 27 células totalmente fechadas (0xF), como o enunciado
+  pede;
+- tamanho do 42: o código desenha um padrão de 11x7 (dois dígitos de 5x7) e
+  exige pelo menos 14x8. O exemplo do subject (figura do capítulo IV.4) mostra
+  dígitos menores, de 3x5, formando um padrão de 7x5 no centro do labirinto.
+  Decidir o tamanho do 42 e o tamanho mínimo do labirinto a partir dele.
+
+Modo PERFECT=False (mazegen/generator.py, _add_loops):
+- só abre paredes aleatórias (cerca de WIDTH*HEIGHT/12 tentativas);
+- não garante dois caminhos independentes, poucos becos sem saída nem o limite
+  de área aberta 3x3 (nas amostras testadas não apareceu 3x3, mas não há
+  garantia nem teste);
+- quebra em tamanhos pequenos: com 2x2 levanta ValueError (randint(1, w - 2)).
+
+Modo PERFECT=True sem o 42 funciona e respeita bordas e coerência.
 
 
 2. EXECUÇÃO OBRIGATÓRIA
@@ -171,6 +233,10 @@ Requisitos:
 - erros de arquivo, sintaxe, configuração e parâmetros impossíveis devem ser
   tratados com mensagens claras;
 - o programa não deve quebrar inesperadamente.
+
+NOTA (estado atual): hoje só FileNotFoundError vira mensagem clara. Config
+inválido (ConfigError e ValueError do parser) e falhas ao gravar o arquivo de
+saída ainda quebram com traceback.
 
 
 3. FORMATO DA CONFIGURAÇÃO
@@ -190,6 +256,9 @@ Chaves obrigatórias:
 
 Chaves adicionais, como SEED, são permitidas. Deve existir uma configuração
 default versionada no repositório.
+
+NOTA (estado atual): o parser exige SEED, embora o enunciado só a permita como
+chave extra. Decidir se SEED passa a ser opcional (sem SEED = aleatório).
 
 
 4. REQUISITOS DO LABIRINTO
@@ -260,6 +329,31 @@ Durante a execução, deve ser possível:
 - alterar a cor das paredes;
 - opcionalmente destacar o padrão 42.
 
+NOTA (estado atual): existe só a renderização ASCII, exibida uma vez. Ainda não
+existe nenhuma das interações obrigatórias (regenerar, mostrar/ocultar caminho,
+mudar a cor das paredes) nem o destaque opcional do 42.
+
+REFERÊNCIA (exemplos de saída do subject):
+- Modos de geração (figura do capítulo IV.4): PERFECT=True mostra um único
+  caminho sinuoso; PERFECT=False (o padrão) mostra um tabuleiro com loops, sem
+  becos sem saída. Nos dois o caminho mais curto aparece destacado e o 42 fica
+  no centro, em células fechadas.
+- Cores da figura: entrada rosa, saída vermelha, 42 cinza claro, caminho
+  mais curto ciano. A saída não precisa ficar no canto oposto à entrada.
+- Renderização no terminal (figura do capítulo de visualização): paredes
+  desenhadas como blocos preenchidos, com entrada, saída e 42 coloridos, e
+  abaixo do labirinto este menu:
+
+      === A-Maze-ing ===
+      1. Re-generate a new maze
+      2. Show / Hide the shortest path
+      3. Rotate the wall colours
+      4. Quit
+      Choice? (1-4):
+
+  Ou seja, as interações obrigatórias são um menu numerado que repete até o
+  usuário escolher 4 (Quit).
+
 
 7. REUTILIZAÇÃO E EMPACOTAMENTO
 -------------------------------
@@ -278,6 +372,9 @@ O pacote deve:
 - estar disponível na raiz do repositório como .whl ou .tar.gz;
 - conter tudo o que é necessário para ser reconstruído com ferramentas padrão;
 - incluir LICENSE.md permitindo reutilização e distribuição.
+
+NOTA (estado atual): LICENSE.md, pyproject.toml e o .whl existem, mas estão
+vazios. A documentação de uso do gerador ainda não foi escrita.
 
 
 8. DOCUMENTAÇÃO DO README.md
@@ -300,51 +397,114 @@ O README deve conter:
 - ferramentas utilizadas;
 - uso de IA, indicando tarefas e partes do projeto em que foi usada.
 
+NOTA (estado atual): o README.md atual só tem anotações de Git. Todo o conteúdo
+acima ainda precisa ser escrito.
+
 
 9. PASSOS NECESSÁRIOS PARA FINALIZAR
 ------------------------------------
 
 Fase 1 - Validar o núcleo:
 
-1. revisar o contrato público de MazeGenerator e MazeSolver;
-2. testar conectividade total;
-3. testar coerência das paredes vizinhas;
-4. testar bordas externas fechadas;
-5. testar PERFECT=True sem loops;
-6. implementar e testar as regras específicas de PERFECT=False;
-7. implementar e testar o padrão 42.
+1. [x] revisar o contrato público de MazeGenerator e MazeSolver
+	(MazeGenerator(width, height, entry, exit_coord, perfect, seed).generate()
+	devolve a grade; MazeSolver(grid, entry, exit_coord).solve() devolve a lista
+	de letras N/E/S/W);
+2. [~] testar conectividade total (sem 42 está correto; com 42 quebra; sem teste);
+3. [~] testar coerência das paredes vizinhas (existe teste, mas só sem 42; com
+	o 42 há paredes incoerentes);
+4. [x] testar bordas externas fechadas (teste existe e passa);
+5. [~] testar PERFECT=True sem loops (a DFS gera árvore, mas não há teste e o 42
+	quebra o resultado);
+6. [~] implementar e testar as regras específicas de PERFECT=False;
+7. [~] implementar e testar o padrão 42 (implementado, com bugs; sem testes;
+	tamanho a definir, ver 1.2);
+8. [ ] garantir que não exista área aberta 3x3 (regra do enunciado);
+9. [ ] evitar que tamanhos pequenos quebrem o gerador (ex.: 2x2).
 
 Fase 2 - Implementar a saída:
 
-8. implementar mazegen/encoder.py;
-9. converter a grade para hexadecimal;
-10. adicionar linha vazia, entrada, saída e caminho mínimo;
-11. testar o conteúdo e a formatação do arquivo.
+10. [x] implementar mazegen/encoder.py;
+11. [x] converter a grade para hexadecimal;
+12. [x] adicionar linha vazia, entrada, saída e caminho mínimo;
+13. [x] testar o conteúdo e a formatação do arquivo.
 
 Fase 3 - Integrar o programa:
 
-12. atualizar a_maze_ing.py para criar o gerador a partir de MazeConfig;
-13. gerar o labirinto;
-14. resolver o caminho;
-15. gravar OUTPUT_FILE;
-16. tratar ConfigError, FileNotFoundError e demais erros esperados.
+14. [x] atualizar a_maze_ing.py para criar o gerador a partir de MazeConfig;
+15. [x] gerar o labirinto;
+16. [x] resolver o caminho;
+17. [x] gravar OUTPUT_FILE;
+18. [~] tratar ConfigError, FileNotFoundError e demais erros esperados (só
+	FileNotFoundError está tratado);
+19. [ ] alinhar o parser ao enunciado (ConfigError em todos os erros, SEED
+	opcional, WIDTH/HEIGHT maiores que zero);
+20. [ ] avisar quando não existir caminho entre entrada e saída.
 
 Fase 4 - Finalizar a visualização:
 
-17. verificar o renderer escolhido;
-18. mostrar paredes, entrada, saída e solução;
-19. implementar regeneração, mostrar/ocultar solução e cores;
-20. testar a execução interativa.
+21. [~] verificar o renderer escolhido (ASCII escolhido; 3 testes falham);
+	decidir também o estilo: o atual desenha paredes com +---+; o exemplo do
+	subject usa blocos preenchidos (mais legível para o 42 e para trocar as
+	cores das paredes);
+22. [~] mostrar paredes, entrada, saída e solução (mostra, mas o 42 não é
+	destacado);
+23. [ ] implementar o menu interativo do subject, repetindo até Quit:
+	1. Re-generate a new maze (gera e exibe outro labirinto);
+	2. Show / Hide the shortest path;
+	3. Rotate the wall colours;
+	4. Quit;
+	com o prompt "Choice? (1-4):" e tratamento de entrada inválida;
+24. [ ] testar a execução interativa;
+25. [ ] (opcional) cores próprias para o padrão 42 (no exemplo, cinza).
 
-Fase 5 - Validar a entrega:
+Fase 5 - Empacotar e documentar:
 
-21. executar todos os testes;
-22. executar flake8;
-23. executar mypy;
-24. executar python3 a_maze_ing.py config.txt;
-25. verificar o arquivo de saída com o analisador fornecido;
-26. reconstruir o pacote mazegen a partir das fontes;
-27. revisar README.md, LICENSE.md e o arquivo config.txt default.
+26. [ ] preencher LICENSE.md;
+27. [ ] preencher pyproject.toml (pacote mazegen-*);
+28. [ ] gerar o pacote mazegen-*.whl ou .tar.gz na raiz e substituir o arquivo
+	vazio atual;
+29. [ ] criar os alvos do Makefile (install, run, debug, clean, lint,
+	lint-strict);
+30. [ ] escrever o README.md completo (seção 8) e a documentação de uso do
+	gerador (seção 7).
+
+Fase 6 - Validar a entrega:
+
+31. [~] executar todos os testes (hoje 18 de 21 passam);
+32. [ ] executar flake8 (hoje 139 avisos);
+33. [x] executar mypy (sem erros hoje);
+34. [~] executar python3 a_maze_ing.py config.txt (roda com o config.txt atual,
+	mas ainda sem interação);
+35. [ ] verificar o arquivo de saída com o analisador fornecido
+	(maze_analyzer.py);
+36. [ ] reconstruir o pacote mazegen a partir das fontes;
+37. [ ] revisar README.md, LICENSE.md e o config.txt default.
+
+Checklist obrigatório (estado atual):
+- [x] Definir o contrato público de MazeGenerator e MazeSolver.
+- [~] Garantir conectividade total, bordas externas fechadas e paredes vizinhas
+      coerentes (bordas ok; conectividade e coerência quebram com o 42).
+- [~] PERFECT=True sem loops (ok sem o 42; falta teste).
+- [~] Regras específicas de PERFECT=False (implementação parcial; falta teste).
+- [~] Implementar e testar o padrão 42 quando o tamanho permitir (implementado
+      com bugs; sem testes).
+- [ ] Garantir que não exista área aberta 3x3.
+- [x] Implementar a serialização hexadecimal do labirinto no formato exigido.
+- [x] Integrar a_maze_ing.py com a leitura da configuração e a gravação do
+      arquivo de saída.
+- [~] Tratar ConfigError, FileNotFoundError e erros esperados com mensagens
+      claras (só FileNotFoundError).
+- [~] Validar a renderização com entrada, saída e solução visíveis (visíveis
+      em ASCII; 3 testes do renderer falham).
+- [ ] Implementar as interações no formato do subject (menu 1-4: regenerar,
+      mostrar/ocultar caminho, girar as cores das paredes, sair).
+- [ ] Empacotar o mazegen (pyproject.toml, LICENSE.md e .whl válidos) e criar
+      os alvos do Makefile.
+- [ ] Executar todos os testes, flake8 e mypy sem falhas (mypy ok; testes 18 de
+      21; flake8 com 139 avisos).
+- [ ] Verificar o arquivo de saída com o analisador fornecido.
+- [ ] Escrever o README.md completo e revisar LICENSE.md e config.txt default.
 
 
 10. BÔNUS
@@ -355,3 +515,22 @@ Possíveis bônus:
 - modo não perfeito sem becos sem saída;
 - múltiplos algoritmos de geração;
 - animação durante a geração.
+
+Bonuses
+You may add various bonuses to your project. Here are possible examples:
+• A default (non-perfect) maze with no dead-end at all: a perfectly “braided”
+board, so a chased player is never trapped anywhere (the provided analysis script
+confirms it with --max-dead-ends 0).
+• Support multiple maze generation algorithms.
+• Add animation during maze generation.
+
+Checklist de bônus (opcional):
+- [ ] Implementar um modo padrão sem dead-ends: labirinto "braided" sem becos sem saída.
+- [ ] Validar que o tabuleiro continua jogável e sem armadilhas para o jogador perseguido.
+- [ ] Usar o analisador fornecido com --max-dead-ends 0 para confirmar a regra bonus.
+- [ ] Adicionar suporte a múltiplos algoritmos de geração (ex.: DFS, Prim, Eller, etc.).
+- [ ] Permitir escolher o algoritmo via configuração ou CLI.
+- [ ] Garantir que cada algoritmo respeite as regras do projeto.
+- [ ] Implementar animação durante a geração do labirinto.
+- [ ] Testar a animação para não quebrar a geração nem a renderização final.
+- [ ] Documentar os bônus no README como melhorias extras do projeto.

@@ -6,10 +6,7 @@ def encode_cell(cell: Cell) -> str:
 
 
 def encode_grid(grid: list[list[Cell]]) -> list[str]:
-    return [
-        "".join(encode_cell(cell)
-        for cell in row) for row in grid
-    ]
+    return ["".join(encode_cell(cell)for cell in row) for row in grid]
 
 
 def encode_maze(
