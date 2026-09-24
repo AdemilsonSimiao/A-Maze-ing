@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import random
 from .algorithms import algorithm_names, generate_edges
 from .pattern import plan_pattern
+from collections.abc import Iterator
 
 
 @dataclass
@@ -123,7 +124,7 @@ class MazeGenerator:
     def _free_positions(self, x: int, y: int) -> list[tuple[int, int]]:
         return [(nx, ny) for _, nx, ny in self._free_neighbors(x, y)]
 
-    def _carve_tree(self) -> None:
+    def _carve_tree(self) -> Iterator[list[list[Cell]]]:
         cells = [
             (cell.x, cell.y)
             for row in self.grid
@@ -139,6 +140,7 @@ class MazeGenerator:
         )
         for (x1, y1), (x2, y2) in passages:
             self._open_passage(x1, y1, x2, y2)
+            yield self.grid
 
     def _block_is_open(self, left: int, top: int) -> bool:
         for row in range(3):
@@ -183,7 +185,7 @@ class MazeGenerator:
             if not self.grid[y][x].is_open(direction)
         ]
 
-    def _remove_dead_ends(self) -> None:
+    def _remove_dead_ends(self) -> Iterator[list[list[Cell]]]:
         dead_ends = [
             cell
             for row in self.grid
@@ -199,6 +201,7 @@ class MazeGenerator:
             options.sort(key=self._is_not_dead_end_position)
             for nx, ny in options:
                 if self._try_open(cell.x, cell.y, nx, ny):
+                    yield self.grid
                     break
 
     def _count_passages(self) -> int:
@@ -208,7 +211,7 @@ class MazeGenerator:
             for cell in row
         )
 
-    def _add_extra_loops(self) -> None:
+    def _add_extra_loops(self) -> Iterator[list[list[Cell]]]:
         free_cells = self.width * self.height - len(self.pattern_cells)
         target = max(2, free_cells // 10)
         extra = self._count_passages() - (free_cells - 1)
@@ -226,16 +229,22 @@ class MazeGenerator:
                 break
             if self._try_open(x, y, nx, ny):
                 extra += 1
+                yield self.grid
 
-    def generate(self) -> list[list[Cell]]:
+    def generate_steps(self) -> Iterator[list[list[Cell]]]:
         self._create_empty_grid()
         self.pattern_cells, self.pattern_message = plan_pattern(
             self.width, self.height, self.entry, self.exit
         )
         if self.pattern_message:
             print(self.pattern_message)
-        self._carve_tree()
+        yield self.grid
+        yield from self._carve_tree()
         if not self.perfect:
-            self._remove_dead_ends()
-            self._add_extra_loops()
+            yield from self._remove_dead_ends()
+            yield from self._add_extra_loops()
+
+    def generate(self) -> list[list[Cell]]:
+        for _ in self.generate_steps():
+            pass
         return self.grid

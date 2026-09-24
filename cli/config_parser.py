@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from mazegen.generator import MazeGenerator
 from .errors import ConfigError
 
 
@@ -11,6 +12,7 @@ class MazeConfig:
     output_file: str
     perfect: bool
     seed: int | None = None
+    algorithm: str = "dfs"
 
 
 def parse_bool(value: str, key: str = "PERFECT") -> bool:
@@ -44,6 +46,16 @@ def parse_coordinates(value: str, key: str) -> tuple[int, int]:
         return int(parts[0].strip()), int(parts[1].strip())
     except ValueError as error:
         raise ConfigError(f"{key} coordinates must be integers.") from error
+
+
+def parse_algorithm(value: str) -> str:
+    algorithm = value.strip().lower()
+    if algorithm not in MazeGenerator.ALGORITHMS:
+        raise ConfigError(
+            "ALGORITHM must be one of: "
+            + ", ".join(MazeGenerator.ALGORITHMS) + "."
+        )
+    return algorithm
 
 
 def check_inside_maze(
@@ -101,7 +113,6 @@ def check_required_keys(values: dict[str, str]) -> None:
         "EXIT",
         "OUTPUT_FILE",
         "PERFECT",
-        "SEED",
     )
     missing = [key for key in required_keys if key not in values]
     if missing:
@@ -121,6 +132,12 @@ def parse_config(path: str) -> MazeConfig:
     check_inside_maze("EXIT", exit_coordinate, width, height)
     if entry == exit_coordinate:
         raise ConfigError("ENTRY and EXIT must be different.")
+    seed = None
+    if "SEED" in values:
+        seed = parse_int(values["SEED"], "SEED")
+    algorithm = "dfs"
+    if "ALGORITHM" in values:
+        algorithm = parse_algorithm(values["ALGORITHM"])
     return MazeConfig(
         width=width,
         height=height,
@@ -128,5 +145,6 @@ def parse_config(path: str) -> MazeConfig:
         exit=exit_coordinate,
         output_file=values["OUTPUT_FILE"],
         perfect=parse_bool(values["PERFECT"]),
-        seed=parse_positive_int(values["SEED"], "SEED"),
+        seed=seed,
+        algorithm=algorithm,
     )
