@@ -27,5 +27,5 @@ lint-strict:
 	$(PYTHON) -m mypy . --strict
 
 build:
-	$(PYTHON) -m build --wheel --outdir .
+	$(PYTHON) -m build
 	rm -rf build *.egg-info
